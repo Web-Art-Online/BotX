@@ -1,0 +1,30 @@
+[project]
+name = "botx" # 项目名称
+version = "0.1.0" # 版本号
+description = "Asynchronous QQ robot framework based on OneBot 11 for Python" # 项目描述
+readme = "README.md" # 读取项目描述的文件（可选）
+license = { text = "LGPL v2 License" } # 许可证类型
+authors = [{ name = "JerryZRF", email = "iridium.zrf@gmail.com" }] # 作者信息
+dependencies = ["dataclasses_json>=0.6.7", "websockets>=14.1"]
+keywords = ["python", "qq", "bot", "onebot"] # 关键字
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: LGPL v2 License",
+    "Operating System :: OS Independent",
+] # PyPI 上的分类
+
+[project.urls]
+repository = "https://github.com/Web-Art-Online/BotX"
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# 额外的工具配置
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
