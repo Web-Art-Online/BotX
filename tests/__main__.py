@@ -7,7 +7,7 @@ from botx.models import *
 bot = Bot("ws://localhost:3001", log_level="DEBUG")
 
 
-@bot.on_cmd(["1", "2"])
+@bot.on_cmd(["1", "2"], help_msg="123456")
 async def f(msg: Message):
     print(threading.current_thread().name)
     print(await msg.reply("111"))
@@ -19,6 +19,11 @@ async def f(recall: PrivateRecall):
     await bot.send_private(
         user=recall.user_id, msg=f"[CQ:reply,id={recall.message_id}]撤回了啥"
     )
+
+
+@bot.on_request()
+async def f(r: GroupRequest):
+    await r.result(approve=False, reason="33333")
 
 
 @bot.on_notice()

@@ -1,6 +1,8 @@
+from dataclasses import dataclass, field
 from typing import Callable
 
 
+@dataclass
 class Command:
     names: list[str]
 
@@ -10,16 +12,4 @@ class Command:
     group: bool
     admin: bool
 
-    def __init__(
-        self,
-        names: list[str],
-        func: Callable,
-        private: bool = False,
-        group: bool = False,
-        admin: bool = False,
-    ):
-        self.names = names
-        self.func = func
-        self.private = private
-        self.group = group
-        self.admin = admin
+    help_msg: str

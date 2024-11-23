@@ -10,6 +10,7 @@ import websockets
 import botx.logging
 from botx.models import *
 from botx.models.notice import notices
+from botx.models.request import requests
 
 _instances: dict[int, "Bot"] = {}
 
@@ -31,6 +32,7 @@ class Bot:
     __cmd_names: list[str]
     __notice_handlers: dict[Type[Notice], list[Callable]]
     __message_handlers: dict[Type[Message], list[Callable]]
+    __request_handlers: dict[Type[Request], list[Callable]]
     __online: bool
 
     def __init__(self, ws_uri: str, cmd_prefix: list[str] = ["#"], msg_cd: float = 0.1, log_level = "INFO"):
@@ -44,9 +46,15 @@ class Bot:
         self.__cmd_names = []
         self.__notice_handlers = {}
         self.__message_handlers = {}
+        self.__request_handlers = {}
         self.__online = True
         self.msg_cd = msg_cd
         self.log_level = log_level
+        
+        @self.on_cmd("帮助", help_msg="给你看帮助的")
+        async def help(msg: Message):
+            await msg.reply(f"✨指令列表✨\n" + "\n".join(map(lambda c: f"{",".join(c.names)}: {c.help_msg}", self.__commands)))
+    
 
     async def start(self):
         if self.__running == True:
@@ -81,7 +89,6 @@ class Bot:
                                 msg = PrivateMessage.from_dict(data)
                             else:
                                 msg = GroupMessage.from_dict(data)
-
                             asyncio.create_task(self.__handle_message(msg))
                         case "meta_event":
                             if data["meta_event_type"] == "heartbeat":
@@ -111,10 +118,23 @@ class Bot:
                                 if clazz.notice_type == data["notice_type"]:
                                     for base in clazz.__bases__ + (clazz,):
                                         for h in self.__notice_handlers.get(base, []):
-                                            asyncio.create_task(
-                                                h(clazz.from_dict(data))
-                                            )
-
+                                            if inspect.iscoroutinefunction(h):
+                                                asyncio.create_task(
+                                                    h(clazz.from_dict(data))
+                                                )
+                                            else:
+                                                asyncio.create_task(asyncio.to_thread(h, clazz.from_dict(data)))
+                        case "request":
+                            for clazz in requests:
+                                if clazz.request_type == data["request_type"]:
+                                    for base in clazz.__bases__ + (clazz,):
+                                        for h in self.__request_handlers.get(base, []):
+                                            if inspect.iscoroutinefunction(h):
+                                                asyncio.create_task(
+                                                    h(clazz.from_dict(data))
+                                                )
+                                            else:
+                                                asyncio.create_task(asyncio.to_thread(h, clazz.from_dict(data)))
                         case _:
                             self.getLogger().warning("Onebot 上报了未知事件.")
 
@@ -141,24 +161,32 @@ class Bot:
         parts = msg.raw_message.split(" ")
         if msg.raw_message[0] in self.cmd_prefix:
             # 是指令
+            flag = False
             for cmd in self.__commands:
                 if parts[0][1:] in cmd.names and (
                     (isinstance(msg, GroupMessage) and cmd.group)
                     or (isinstance(msg, PrivateMessage) and cmd.private)
                 ):
+                    flag = True
                     self.getLogger().debug(f"执行指令 {msg.raw_message}")
                     params = {}
                     for k, v in cmd.func.__annotations__.items():
                         if issubclass(v, Message):
                             params[k] = msg
-                    asyncio.create_task(cmd.func(**params))
+                    if inspect.iscoroutinefunction(cmd.func):
+                        asyncio.create_task(cmd.func(**params))
+                    else:
+                        asyncio.create_task(asyncio.to_thread(cmd.func, **params))
+            if not flag:
+                await msg.reply(f"未知指令. 请发送 {self.cmd_prefix[0]}帮助 看看怎么使用.")
         else:
             await asyncio.gather(
                 *map(
                     lambda h: h(msg),
                     self.__message_handlers.get(Message, [])
                     + self.__message_handlers.get(type(msg), []),
-                )
+                ),
+                return_exceptions=True
             )
         await self.call_api(
             action="mark_msg_as_read", params={"message_id": msg.message_id}
@@ -168,8 +196,11 @@ class Bot:
         self,
         name: str | list[str],
         admin: bool = False,
+        help_msg: str = "开发者很懒, 没有添加描述哦~"
     ):
-        if name == None:
+        if not help_msg:
+            raise ValueError("帮助文本不能为 None")
+        if not name:
             raise ValueError("指令名不能为 None")
         name = [name] if isinstance(name, str) else name
 
@@ -180,8 +211,6 @@ class Bot:
 
             if any(map(lambda n: n in self.__cmd_names, name)):
                 raise ValueError("指令名重复")
-            if not inspect.iscoroutinefunction(func):
-                raise ValueError("处理函数必须是 async 的")
             self.__cmd_names.append(name)
             self.__commands.append(
                 Command(
@@ -190,6 +219,7 @@ class Bot:
                     private=msg_type == PrivateMessage or msg_type == Message,
                     group=msg_type == GroupMessage or msg_type == Message,
                     admin=admin,
+                    help_msg=help_msg
                 )
             )
             self.getLogger().debug(
@@ -202,9 +232,9 @@ class Bot:
         def f(func: Callable):
             if len(func.__annotations__) != 1:
                 raise ValueError("处理函数必须只有一个参数")
-            if not inspect.iscoroutinefunction(func):
-                raise ValueError("处理函数必须是 async 的")
             notice_type = list(func.__annotations__.values())[0]
+            if not issubclass(notice_type, Notice):
+                raise ValueError(f"参数必须是 Notice 的子类, 实际是{notice_type}")
             handlers = self.__notice_handlers.get(notice_type, [])
             handlers.append(func)
             self.__notice_handlers[notice_type] = handlers
@@ -215,13 +245,26 @@ class Bot:
         def f(func: Callable):
             if len(func.__annotations__) != 1:
                 raise ValueError("处理函数必须只有一个参数")
-            if not inspect.iscoroutinefunction(func):
-                raise ValueError("处理函数必须是 async 的")
             msg_type = list(func.__annotations__.values())[0]
+            if not issubclass(msg_type, Message):
+                raise ValueError(f"参数必须是 Message 的子类, 实际是{msg_type}")
             handlers = self.__message_handlers.get(msg_type, [])
             handlers.append(func)
             self.__message_handlers[msg_type] = handlers
 
+        return f
+    
+    def on_request(self):
+        def f(func: Callable):
+            if len(func.__annotations__) != 1:
+                raise ValueError("处理函数必须只有一个参数")
+            request_type = list(func.__annotations__.values())[0]
+            if not issubclass(request_type, Request):
+                raise ValueError(f"参数必须是 Request 的子类, 实际是{request_type}")
+            handlers = self.__request_handlers.get(request_type, [])
+            handlers.append(func)
+            self.__request_handlers[request_type] = handlers
+            
         return f
 
     async def send_private(
