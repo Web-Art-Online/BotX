@@ -53,7 +53,8 @@ class Bot:
         
         @self.on_cmd("帮助", help_msg="给你看帮助的")
         async def help(msg: Message):
-            await msg.reply(f"✨指令列表✨\n" + "\n".join(map(lambda c: f"{",".join(c.names)}: {c.help_msg}", self.__commands)))
+            await msg.reply(f"✨指令列表✨\n" + "\n".join(map(lambda c: f"{",".join(c.names)}: {c.help_msg}", 
+                                                        filter(lambda c: isinstance(msg, c.cmd_type), self.__commands))))
     
 
     async def start(self):
@@ -163,10 +164,7 @@ class Bot:
             # 是指令
             flag = False
             for cmd in self.__commands:
-                if parts[0][1:] in cmd.names and (
-                    (isinstance(msg, GroupMessage) and cmd.group)
-                    or (isinstance(msg, PrivateMessage) and cmd.private)
-                ):
+                if parts[0][1:] in cmd.names and isinstance(msg, cmd.cmd_type):
                     flag = True
                     self.getLogger().debug(f"执行指令 {msg.raw_message}")
                     params = {}
@@ -216,8 +214,7 @@ class Bot:
                 Command(
                     names=name,
                     func=func,
-                    private=msg_type == PrivateMessage or msg_type == Message,
-                    group=msg_type == GroupMessage or msg_type == Message,
+                    cmd_type=msg_type,
                     admin=admin,
                     help_msg=help_msg
                 )

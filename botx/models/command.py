@@ -8,8 +8,6 @@ class Command:
 
     func: Callable
 
-    private: bool
-    group: bool
+    cmd_type: type
     admin: bool
-
     help_msg: str
