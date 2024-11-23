@@ -5,7 +5,11 @@ description = "Asynchronous QQ robot framework based on OneBot 11 for Python" # 
 readme = "README.md" # 读取项目描述的文件（可选）
 license = { text = "LGPL v2 License" } # 许可证类型
 authors = [{ name = "JerryZRF", email = "iridium.zrf@gmail.com" }] # 作者信息
-dependencies = ["dataclasses_json>=0.6.7", "websockets>=14.1"]
+dependencies = [
+    "dataclasses_json>=0.6.7",
+    "websockets>=14.1",
+    "colorlog>=6.9.0",
+]
 keywords = ["python", "qq", "bot", "onebot"] # 关键字
 classifiers = [
     "Programming Language :: Python :: 3",

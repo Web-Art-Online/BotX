@@ -23,6 +23,7 @@ class Bot:
     cmd_prefix: list[str]
     me: User
     msg_cd: int
+    log_level: str
     __running: bool = False
     __queue: asyncio.Queue
     __futures: dict[str, asyncio.Future]
@@ -32,7 +33,7 @@ class Bot:
     __message_handlers: dict[Type[Message], list[Callable]]
     __online: bool
 
-    def __init__(self, ws_uri: str, cmd_prefix: list[str] = ["#"], msg_cd: float = 0.1):
+    def __init__(self, ws_uri: str, cmd_prefix: list[str] = ["#"], msg_cd: float = 0.1, log_level = "INFO"):
         self.ws_uri = ws_uri
 
         self.cmd_prefix = cmd_prefix
@@ -45,6 +46,7 @@ class Bot:
         self.__message_handlers = {}
         self.__online = True
         self.msg_cd = msg_cd
+        self.log_level = log_level
 
     async def start(self):
         if self.__running == True:
@@ -257,4 +259,4 @@ class Bot:
             return GroupMessage.from_dict(resp["data"])
 
     def getLogger(self) -> logging.Logger:
-        return botx.logging.getLogger("Core" if self.me == None else self.me.user_id)
+        return botx.logging.getLogger(name="Core" if self.me == None else self.me.user_id, level=self.log_level)

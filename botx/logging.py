@@ -5,7 +5,7 @@ colorlog.basicConfig(
 )
 
 
-def getLogger(id: int):
-    logger = colorlog.getLogger(str(id))
-    logger.setLevel("DEBUG")
+def getLogger(name, level: str):
+    logger = colorlog.getLogger(str(name))
+    logger.setLevel(level)
     return logger
