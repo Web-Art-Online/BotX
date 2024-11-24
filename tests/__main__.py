@@ -1,16 +1,25 @@
 import asyncio
+import base64
 import threading
 
-from botx import Bot
+from botx import Bot, QzoneImage, Qzone
 from botx.models import *
 
 bot = Bot("ws://localhost:3001", log_level="DEBUG")
+
+
+def read_image(path: str) -> bytes:
+    with open(path, mode="br") as f:
+        return base64.b64encode(f.read())
 
 
 @bot.on_cmd(["1", "2"], help_msg="123456")
 async def f(msg: Message):
     print(threading.current_thread().name)
     print(await msg.reply("111"))
+    q: Qzone = await bot.get_qzone()
+    image = await q.upload_image(read_image("./tests/misaka.jpg"))
+    print(await q.publish("misaka", [image]))
     raise RuntimeError("test")
 
 

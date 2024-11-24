@@ -11,6 +11,7 @@ import botx.logging
 from botx.models import *
 from botx.models.notice import notices
 from botx.models.request import requests
+from botx.qzone import Qzone
 
 _instances: dict[int, "Bot"] = {}
 
@@ -300,3 +301,13 @@ class Bot:
 
     def getLogger(self) -> logging.Logger:
         return botx.logging.getLogger(name="Core" if self.me == None else self.me.user_id, level=self.log_level)
+
+    async def get_qzone(self) -> Qzone:
+        cookies = dict(
+                c.split("=")
+                for c in 
+                (await self.call_api("get_cookies", {"domain": "user.qzone.qq.com"}))["data"]["cookies"]
+                .replace(" ", "")
+                .split(";")
+            )
+        return Qzone(uin=self.me.user_id, cookies=cookies)
