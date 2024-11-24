@@ -20,7 +20,18 @@ async def f(msg: Message):
     q: Qzone = await bot.get_qzone()
     image = await q.upload_image(read_image("./tests/misaka.jpg"))
     print(await q.publish("misaka", [image]))
-    raise RuntimeError("test")
+
+
+@bot.on_cmd("3")
+async def f(msg: PrivateMessage):
+    print(111)
+    raise RuntimeError(111)
+
+
+@bot.on_error()
+async def e(c, d):
+    print(c)
+    print(d)
 
 
 @bot.on_notice()
@@ -28,6 +39,7 @@ async def f(recall: PrivateRecall):
     await bot.send_private(
         user=recall.user_id, msg=f"[CQ:reply,id={recall.message_id}]撤回了啥"
     )
+    raise RuntimeError()
 
 
 @bot.on_request()
@@ -51,7 +63,7 @@ async def f(msg: PrivateMessage):
 
 
 async def main():
-    await asyncio.gather(bot.start())
+    await bot.start()
 
 
 asyncio.run(main())
