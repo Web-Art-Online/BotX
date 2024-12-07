@@ -5,3 +5,6 @@ from dataclasses import dataclass
 class Group:
     name: str
     id: int
+
+    def __str__(self):
+        return f"{self.name}({self.id})"

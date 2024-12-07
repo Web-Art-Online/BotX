@@ -5,3 +5,6 @@ from dataclasses import dataclass
 class User:
     nickname: str
     user_id: int
+
+    def __str__(self):
+        return f"{self.nickname}({self.user_id})"
