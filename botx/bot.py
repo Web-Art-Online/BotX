@@ -58,7 +58,7 @@ class Bot:
         
         @self.on_cmd("帮助", help_msg="给你看帮助的")
         async def help(msg: Message):
-            await msg.reply(f"✨指令列表✨\n" + "\n".join(map(lambda c: f"#{", #".join(c.names)}: {c.help_msg}", 
+            await msg.reply(f"✨指令列表✨\n\n" + "\n\n".join(map(lambda c: f"#{", #".join(c.names)}: {c.help_msg}", 
                                                         filter(lambda c: isinstance(msg, c.cmd_type), self.__commands))))
     
 
