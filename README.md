@@ -52,6 +52,8 @@ asyncio.run(bot.start())
 目前 BotX 仅支持 `send_private`, `send_group`, `get_msg` 三个方法, 其余的 API 请使用 `call_api` 方法调用
 
 ### Qzone 部分
+> 本项目的 Qzone 部分借鉴了 [Campux](https://github.com/idoknow/Campux)
+
 自己看代码吧～
 ```Python
 async def publish(text: str, image: bytes)
