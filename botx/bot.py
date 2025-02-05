@@ -1,5 +1,4 @@
 import asyncio
-from dataclasses import fields
 import inspect
 import json
 import logging
@@ -92,7 +91,8 @@ class Bot:
                     else:
                         msg = GroupMessage.from_dict(data)
                     parts = msg.raw_message.split(" ")
-                    if msg.raw_message[0] in self.cmd_prefix:
+                    # 如果用户没有添加指令就不要执行了
+                    if len(self.__commands) > 1 and msg.raw_message[0] in self.cmd_prefix:
                         # 是指令
                         flag = False
                         for cmd in self.__commands:
