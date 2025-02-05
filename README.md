@@ -3,6 +3,7 @@
 
 ## 使用
 
+### 主体部分
 > [!NOTE]  
 你需要先学习 Python 的 `asyncio` 再来使用本库
 
@@ -34,10 +35,31 @@ async def friend(req: FriendRequest):
 async def recall(notice: GroupRecall):
     pass
 
+@bot.on_error()
+""" 第一个参数为 Eventloop 的 Context, 第二个参数为 Onebot 发送的数据 """
+async def error(context: dict, data: dict):
+    pass
+
 asyncio.run(bot.start())
 ```
 > [!IMPORTANT]  
 > 这些装饰器所装饰的函数都必须是 `async` 的
+
+你需要使用**类型注解**来告诉 BotX 你想要干什么  
+比如，你想要接收*私聊消息*那就把形参声明为`PrivateMessage`类型  
+相信聪明的你一定能快速上手的~✨
+
+目前 BotX 仅支持 `send_private`, `send_group`, `get_msg` 三个方法, 其余的 API 请使用 `call_api` 方法调用
+
+### Qzone 部分
+自己看代码吧～
+```Python
+async def publish(text: str, image: bytes)
+    qzone = await bot.get_qzone()
+
+    return await qzone.publish(text,
+        await qzone.upload_image(image))
+```
 
 ## 开发进度
 ### 已支持的 Notice
