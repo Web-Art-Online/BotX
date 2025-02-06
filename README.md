@@ -42,8 +42,6 @@ async def error(context: dict, data: dict):
 
 asyncio.run(bot.start())
 ```
-> [!IMPORTANT]  
-> 这些装饰器所装饰的函数都必须是 `async` 的
 
 你需要使用**类型注解**来告诉 BotX 你想要干什么  
 比如，你想要接收*私聊消息*那就把形参声明为`PrivateMessage`类型  

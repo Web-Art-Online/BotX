@@ -161,7 +161,7 @@ class Bot:
                             for base in clazz.__bases__ + (clazz,):
                                 for h in self.__request_handlers.get(base, []):
                                     if inspect.iscoroutinefunction(h):
-                                        tasj = asyncio.create_task(
+                                        task = asyncio.create_task(
                                             h(clazz.from_dict(data))
                                         )
                                     else:
