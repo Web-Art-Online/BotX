@@ -21,6 +21,8 @@ def get_bot(id: int) -> "Bot":
 
 class Bot:
     ws_uri: str
+    __token: str
+    
     cmd_prefix: list[str]
     me: User
     msg_cd: int
@@ -37,8 +39,9 @@ class Bot:
     __online: bool
     __tasks: dict[str, dict]
 
-    def __init__(self, ws_uri: str, cmd_prefix: list[str] = ["#"], msg_cd: float = 0.1, log_level = "INFO"):
+    def __init__(self, ws_uri: str, *, token: str | None = None, cmd_prefix: list[str] = ["#"], msg_cd: float = 0.1, log_level = "INFO"):
         self.ws_uri = ws_uri
+        self.__token = token
 
         self.cmd_prefix = cmd_prefix
         self.me = None
@@ -188,7 +191,7 @@ class Bot:
                 else:
                     asyncio.create_task(event(data))
             
-        async for ws in websockets.connect(uri=self.ws_uri):
+        async for ws in websockets.connect(uri=self.ws_uri, additional_headers={"Authorization": f"Bearer {self.__token}"}):
             self.getLogger().info(f"连接至 Onebot: {self.ws_uri}")
             try:
                 await asyncio.gather(sender(ws), receiver(ws))

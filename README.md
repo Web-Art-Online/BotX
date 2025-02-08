@@ -53,7 +53,7 @@ asyncio.run(bot.start())
 > 本项目的 Qzone 部分借鉴了 [Campux](https://github.com/idoknow/Campux)
 
 自己看代码吧～
-```Python
+```python
 async def publish(text: str, image: bytes)
     qzone = await bot.get_qzone()
 
