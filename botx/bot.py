@@ -180,10 +180,10 @@ class Bot:
             while True:
                 data: dict = json.loads(await ws.recv())
                 self.getLogger().debug(data)
-                if data["retcode"] == 1403:
-                    self.getLogger().fatal("Access Token 错误")
-                    sys.exit(-1)
                 if "echo" in data:
+                    if data["retcode"] == 1403:
+                        self.getLogger().fatal("Access Token 错误")
+                        sys.exit(-1)
                     future = self.__futures.get(data["echo"])
                     if future == None:
                         self.getLogger().warning(
