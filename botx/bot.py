@@ -61,9 +61,11 @@ class Bot:
         
         @self.on_cmd("帮助", help_msg="给你看帮助的")
         async def help(msg: Message):
-            await msg.reply(f"✨指令列表\n\n" + "\n".join(map(lambda c: f"#{", #".join(c.names)}: {c.help_msg}", 
-                                                        filter(lambda c: isinstance(msg, c.cmd_type), self.__commands))))
-    
+            cmds = list(filter(lambda cmd: isinstance(msg, cmd.cmd_type) and cmd.is_target(msg), self.__commands))
+            if len(cmds) == 1:
+                await msg.reply("啥指令都没有呢~")
+                return
+            await msg.reply(f"✨指令列表\n\n" + "\n".join(map(lambda cmd: f"#{", #".join(cmd.names)}: {cmd.help_msg}", cmds)))
 
     async def start(self):
         if self.__running == True:
@@ -98,28 +100,33 @@ class Bot:
                     # 如果用户没有添加指令就不要执行了
                     if len(self.__commands) > 1 and msg.raw_message[0] in self.cmd_prefix:
                         # 是指令
-                        flag = False
+                        found = False
                         for cmd in self.__commands:
                             if parts[0][1:] in cmd.names and isinstance(msg, cmd.cmd_type):
-                                flag = True
+                                if not cmd.is_target(msg):
+                                    return
+
+                                found = True
                                 self.getLogger().debug(f"执行指令 {msg.raw_message}")
                                 params = {}
                                 for k, v in cmd.func.__annotations__.items():
                                     if issubclass(v, Message):
                                         params[k] = msg
+                                        
                                 if inspect.iscoroutinefunction(cmd.func):
                                     task = asyncio.create_task(cmd.func(**params))
                                 else:
                                     task = asyncio.create_task(asyncio.to_thread(cmd.func, **params))
                                 self.__tasks[task.get_name()] = data
-                        if not flag:
+                                
+                        if not found:
                             await msg.reply(f"未知指令. 请发送 {self.cmd_prefix[0]}帮助 看看怎么使用.")
                     else:
-                        for h in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
-                            if inspect.iscoroutinefunction(h):
-                                task = asyncio.create_task(h(msg))
+                        for handler in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
+                            if inspect.iscoroutinefunction(handler):
+                                task = asyncio.create_task(handler(msg))
                             else:
-                                task = asyncio.create_task(asyncio.to_thread(h, msg))
+                                task = asyncio.create_task(asyncio.to_thread(handler, msg))
                             self.__tasks[task.get_name()] = data
                     await self.call_api(
                         action="mark_msg_as_read", params={"message_id": msg.message_id}
@@ -151,25 +158,25 @@ class Bot:
                     for clazz in notices:
                         if clazz.notice_type == data["notice_type"]:
                             for base in clazz.__bases__ + (clazz,):
-                                for h in self.__notice_handlers.get(base, []):
-                                    if inspect.iscoroutinefunction(h):
+                                for handler in self.__notice_handlers.get(base, []):
+                                    if inspect.iscoroutinefunction(handler):
                                         task = asyncio.create_task(
-                                            h(clazz.from_dict(data))
+                                            handler(clazz.from_dict(data))
                                         )
                                     else:
-                                        task = asyncio.create_task(asyncio.to_thread(h, clazz.from_dict(data)))
+                                        task = asyncio.create_task(asyncio.to_thread(handler, clazz.from_dict(data)))
                                     self.__tasks[task.get_name()] = data
                 case "request":
                     for clazz in requests:
                         if clazz.request_type == data["request_type"]:
                             for base in clazz.__bases__ + (clazz,):
-                                for h in self.__request_handlers.get(base, []):
-                                    if inspect.iscoroutinefunction(h):
+                                for handler in self.__request_handlers.get(base, []):
+                                    if inspect.iscoroutinefunction(handler):
                                         task = asyncio.create_task(
-                                            h(clazz.from_dict(data))
+                                            handler(clazz.from_dict(data))
                                         )
                                     else:
-                                        task = asyncio.create_task(asyncio.to_thread(h, clazz.from_dict(data)))
+                                        task = asyncio.create_task(asyncio.to_thread(handler, clazz.from_dict(data)))
                                     self.__tasks[task.get_name()] = data
                 case _:
                     self.getLogger().warning("Onebot 上报了未知事件.")
@@ -218,7 +225,8 @@ class Bot:
         self,
         name: str | list[str],
         admin: bool = False,
-        help_msg: str = "开发者很懒, 没有添加描述哦~"
+        help_msg: str = "开发者很懒, 没有添加描述哦~",
+        targets: list[str | int] = []
     ):
         if not help_msg:
             raise ValueError("帮助文本不能为 None")
@@ -230,7 +238,14 @@ class Bot:
             if len(func.__annotations__) != 1:
                 raise ValueError("处理函数必须只有1个参数")
             msg_type = list(func.__annotations__.values())[0]
-
+            
+            if msg_type is Message:
+                if any(map(lambda t: not isinstance(t, str) or (t[0] != "p" and t[0] != "g"), targets)):
+                    raise ValueError("接收 Message 的处理函数的 targets 必须以 'p'(私聊) / 'g'(群聊) 开头")
+            else:
+                if not all(map(lambda t: isinstance(t, int), targets)):
+                    raise ValueError("接收 PrivateMessage / GroupMessage 的处理函数的 targets 必须是 int 类型")
+                    
             if any(map(lambda n: n in self.__cmd_names, name)):
                 raise ValueError("指令名重复")
             self.__cmd_names.append(name)
@@ -240,7 +255,8 @@ class Bot:
                     func=func,
                     cmd_type=msg_type,
                     admin=admin,
-                    help_msg=help_msg
+                    help_msg=help_msg,
+                    targets=targets
                 )
             )
             self.getLogger().debug(

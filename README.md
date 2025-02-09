@@ -23,8 +23,19 @@ bot = Bot("ws://localhost:3001")
 async def echo(msg: PrivateMessage):
     await msg.reply(msg.raw_message)
 
-@bot.on_cmd("hi", help_msg="你好")
+# 如果要接收 Message, 你可以使用 targets 来指定目标, 'p'代表私聊, 'g'代表群聊
+@bot.on_cmd("hi", help_msg="你好", targets=["p10001", "g123456"])
 async def hi(msg: Message):
+    await msg.reply("hi")
+
+# 如果指定了 PrivateMessage / GroupMessage 则直接指定 int
+@bot.on_cmd("hi", help_msg="你好", targets=[10001])
+async def hi_2(msg: PrivateMessage):
+    await msg.reply("hi")
+
+# 也可以不指定, 接收所有消息. 注意: targets 为 [] / None / False 时皆为不指定
+@bot.on_cmd("hi", help_msg="你好")
+async def hi_2(msg: PrivateMessage):
     await msg.reply("hi")
 
 @bot.on_request()
