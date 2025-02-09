@@ -104,7 +104,7 @@ class Bot:
                         for cmd in self.__commands:
                             if parts[0][1:] in cmd.names and isinstance(msg, cmd.cmd_type):
                                 if not cmd.is_target(msg):
-                                    return
+                                    continue
 
                                 found = True
                                 self.getLogger().debug(f"执行指令 {msg.raw_message}")
