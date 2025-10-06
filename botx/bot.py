@@ -100,27 +100,31 @@ class Bot:
                     # 如果用户没有添加指令就不要执行了
                     if len(self.__commands) > 1 and msg.raw_message[0] in self.cmd_prefix:
                         # 是指令
-                        found = False
                         for cmd in self.__commands:
                             if parts[0][1:] in cmd.names and isinstance(msg, cmd.cmd_type):
                                 if not cmd.is_target(msg):
                                     continue
 
-                                found = True
                                 self.getLogger().debug(f"执行指令 {msg.raw_message}")
                                 params = {}
                                 for k, v in cmd.func.__annotations__.items():
                                     if issubclass(v, Message):
                                         params[k] = msg
-                                        
+
                                 if inspect.iscoroutinefunction(cmd.func):
                                     task = asyncio.create_task(cmd.func(**params))
                                 else:
                                     task = asyncio.create_task(asyncio.to_thread(cmd.func, **params))
                                 self.__tasks[task.get_name()] = data
-                                
-                        if not found:
-                            await msg.reply(f"未知指令. 请发送 {self.cmd_prefix[0]}帮助 看看怎么使用.")
+                                break
+                        # 不再回复“未知命令”，而是让消息继续交给其他消息处理器
+                        for handler in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
+                            if inspect.iscoroutinefunction(handler):
+                                task = asyncio.create_task(handler(msg))
+                            else:
+                                task = asyncio.create_task(asyncio.to_thread(handler, msg))
+                            self.__tasks[task.get_name()] = data
+
                     else:
                         for handler in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
                             if inspect.iscoroutinefunction(handler):
