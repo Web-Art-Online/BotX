@@ -41,9 +41,18 @@ class Bot:
     __online: bool
     __tasks: dict[str, dict]
 
-    def __init__(self, ws_uri: str, *, token: str | None = None, cmd_prefix: list[str] = ["#"], msg_cd: float = 0.1, log_level = "INFO"):
-        self.ws_uri = ws_uri
-        self.__token = token
+def __init__(
+    self, 
+    ws_uri: str, 
+    *, 
+    token: str | None = None, 
+    cmd_prefix: list[str] = ["#", "＃"], 
+    msg_cd: float = 0.1, 
+    log_level = "INFO"
+):
+    self.ws_uri = ws_uri
+    self.__token = token
+    self.cmd_prefix = cmd_prefix
 
         self.cmd_prefix = cmd_prefix
         self.me = None
