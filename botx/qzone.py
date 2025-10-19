@@ -42,14 +42,14 @@ class NormalImage(QzoneImage):
 class RawImage(QzoneImage):
 
     @classmethod
-    def parse(cls, data: dict):
+    def parse(cls, data: dict, album_id: str):
         pic_bo = data["url"].split("&bo=")[1]
         richval = "{},{},{},{},{},{},{},,{},{}".format(
-            data["uin"],
-            data["albumId"],
+            data["owner"],
+            album_id,
             data["lloc"],
             data["sloc"],
-            data["photoType"],
+            data["phototype"],
             data["height"],
             data["width"],
             data["height"],
@@ -184,7 +184,7 @@ class Qzone:
                     "env": {"refer": "qzone", "deviceInfo": "h5"},
                     "model": 0,
                     "biz_req": {
-                        "sPicTitle": "image",
+                        "sPicTitle": name,
                         "sPicDesc": "",
                         "sAlbumID": album_id,
                         "iAlbumTypeID": 0,
@@ -227,21 +227,29 @@ class Qzone:
         d = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
         return d["data"]["albumListModeSort"][-1]["id"]
 
-    async def _get_image(self, name: str) -> RawImage:
+    async def _get_image(self, album_id: str, name: str) -> RawImage:
+
         resp = await self.client.get(
-            "https://mobile.qzone.qq.com/ic2/cgi-bin/feeds/feeds2_html_picfeed_qqtab",
+            "https://h5.qzone.qq.com/proxy/domain/photo.qzone.qq.com/fcgi-bin/cgi_list_photo",
             params={
-                "uin": self.uin,
-                "refer": "recently",
-                "fuin": self.uin,
                 "g_tk": self.get_g_tk(),
-            },  # uin=858479588&refer=recently&fuin=858479588&g_tk=1918342241
-        )
+                "hostUin": self.uin,
+                "uin": self.uin,
+                "inCharset": "utf-8",
+                "outCharset": "utf-8",
+                "topicId": album_id,
+                "pageStart": 0,
+                "pageNum": 500,
+            },
+        )  # ?g_tk=1250279706&hostUin=858479588&topicId=V10p6ohr1EopAd&noTopic=0&uin=858479588&pageStart=0&inCharset=utf-8&outCharset=utf-8
+
         text = resp.text.replace(" ", "")[10:-16] + "]}}"
-        data = json.loads(text)
-        for p in data["data"]["photos"]:
+        data = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
+        for p in data["data"]["photoList"]:
+            print(p["name"])
+            print(name)
             if p["name"] == name:
-                return RawImage.parse(p)
+                return RawImage.parse(p, album_id=album_id)
         raise RuntimeError("Fuck! Where's the photo?")
 
     async def upload_raw_image(self, file_path: str) -> RawImage:
@@ -291,7 +299,7 @@ class Qzone:
                         "uin": str(self.uin),
                     },
                 )
-        return await self._get_image(name=name)
+        return await self._get_image(name=name, album_id=album)
 
 
 def get_len(file_path: str):
