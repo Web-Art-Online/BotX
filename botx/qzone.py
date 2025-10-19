@@ -4,6 +4,7 @@ import time
 import base64
 import hashlib
 import os
+import random
 
 from httpx import AsyncClient
 
@@ -164,8 +165,9 @@ class Qzone:
             hash_val += (hash_val << 5) + ord(p_skey[i])
         return str(hash_val & 2147483647)
 
-    async def _get_session(self, file_path: str, album_id: str):
+    async def _get_session(self, file_path: str, album_id: str, name: str):
         file_md5 = get_md5(file_path)
+
         p = {
             "control_req": [
                 {
@@ -225,7 +227,7 @@ class Qzone:
         d = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
         return d["data"]["albumListModeSort"][-1]["id"]
 
-    async def _get_last_image(self) -> RawImage:
+    async def _get_image(self, name: str) -> RawImage:
         resp = await self.client.get(
             "https://mobile.qzone.qq.com/ic2/cgi-bin/feeds/feeds2_html_picfeed_qqtab",
             params={
@@ -237,11 +239,18 @@ class Qzone:
         )
         text = resp.text.replace(" ", "")[10:-16] + "]}}"
         data = json.loads(text)
-        return RawImage.parse(data["data"]["photos"][0])
+        for p in data["data"]["photos"]:
+            if p["name"] == name:
+                return RawImage.parse(p)
+        raise RuntimeError("Fuck! Where's the photo?")
 
     async def upload_raw_image(self, file_path: str) -> RawImage:
         album = await self._get_default_album()
-        session = await self._get_session(file_path=file_path, album_id=album)
+        name = base64.b64encode(random.randbytes(16)).decode("utf-8")
+
+        session = await self._get_session(
+            file_path=file_path, album_id=album, name=name
+        )
         slice_size = 16384
 
         total_size = get_len(file_path)
@@ -254,7 +263,7 @@ class Qzone:
                 offset = seq * slice_size
                 data = base64.b64encode(f.read(slice_size)).decode("utf-8")
                 end = min(offset + slice_size, total_size)
-                resp = await self.client.post(
+                await self.client.post(
                     "https://h5.qzone.qq.com/webapp/json/sliceUpload/FileUpload",
                     params={
                         "type": "json",
@@ -282,7 +291,7 @@ class Qzone:
                         "uin": str(self.uin),
                     },
                 )
-        return await self._get_last_image()
+        return await self._get_image(name=name)
 
 
 def get_len(file_path: str):
