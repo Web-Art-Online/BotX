@@ -244,7 +244,7 @@ class Qzone:
                 return album["id"]
         return None
 
-    async def _get_image(self, album_id: str, name: str) -> RawImage | None:
+    async def get_image(self, album_id: str, name: str) -> QzoneImage | None:
         resp = await self.client.get(
             "https://h5.qzone.qq.com/proxy/domain/photo.qzone.qq.com/fcgi-bin/cgi_list_photo",
             params={
@@ -266,6 +266,33 @@ class Qzone:
             if p["name"] == name:
                 return RawImage.parse(p, album_id=album_id)
         return None
+
+    async def delete_image(self, image: QzoneImage):
+        data = image.richval.split(",")
+        resp = await self.client.post(
+            "https://user.qzone.qq.com/proxy/domain/photo.qzone.qq.com/cgi-bin/common/cgi_delpic_multi_v2",
+            params={
+                "g_tk": self.get_g_tk(),
+            },
+            data={
+                "albumid": data[1],
+                "nvip": "0",
+                "bgid": "undefined",
+                "tpid": "undefined",
+                "priv": "3",
+                "codelist": f"{data[2]}|1||0||{data[3]}|3|0",
+                "ismultiup": "0",
+                "resetcover": "1",
+                "newcover": "",
+                "uin": data[0],
+                "hostUin": data[0],
+                "plat": "qzone",
+                "source": "qzone",
+                "inCharset": "utf-8",
+                "outCharset": "utf-8",
+                "qzreferrer": f"https://user.qzone.qq.com/proxy/domain/qzs.qq.com/qzone/photo/v7/page/photo.html?init=photo.v7/module/photoList2/index&navBar=1&normal=1&aid={data[1]}&g_iframeUser=1",
+            },
+        )
 
     async def _upload_raw_image(self, file_path: str, session: str):
         slice_size = 16384
