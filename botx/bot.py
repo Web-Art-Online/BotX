@@ -370,4 +370,4 @@ class Bot:
                 .replace(" ", "")
                 .split(";")
             )
-        return Qzone(uin=self.me.user_id, cookies=cookies)
+        return Qzone(uin=str(self.me.user_id), cookies=cookies)

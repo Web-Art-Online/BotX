@@ -165,7 +165,15 @@ class Qzone:
             hash_val += (hash_val << 5) + ord(p_skey[i])
         return str(hash_val & 2147483647)
 
-    async def _get_session(self, file_path: str, album_id: str, name: str):
+    async def _get_session(
+        self,
+        file_path: str,
+        album_id: str,
+        name: str,
+        total: int,
+        index: int,
+        iBatchID: int,
+    ) -> str:
         file_md5 = get_md5(file_path)
 
         p = {
@@ -190,8 +198,8 @@ class Qzone:
                         "iAlbumTypeID": 0,
                         "iBitmap": 0,
                         "iUploadType": 3,  # 原图
-                        "iUpPicType": 0,
-                        "iBatchID": int(time.time() * 1e6),
+                        "iUpPicType": 0 if total == 1 else 1,
+                        "iBatchID": iBatchID,
                         "sPicPath": "",
                         "iPicWidth": 0,
                         "iPicHight": 0,
@@ -199,6 +207,12 @@ class Qzone:
                         "iDistinctUse": 0,
                         "iNeedFeeds": 1,
                         "iUploadTime": int(time.time()),
+                        "mutliPicInfo": {
+                            "iBatUploadNum": total,
+                            "iCurUpload": index,
+                            "iSuccNum": index,
+                            "iFailNum": 0,
+                        },
                     },
                     "session": "",
                     "asy_upload": 0,
@@ -213,7 +227,7 @@ class Qzone:
         )
         return resp.json()["data"]["session"]
 
-    async def _get_default_album(self):
+    async def get_album(self, name) -> str | None:
         resp = await self.client.get(
             "https://user.qzone.qq.com/proxy/domain/photo.qzone.qq.com/fcgi-bin/fcg_list_album_v3",
             params={
@@ -225,10 +239,12 @@ class Qzone:
             },
         )
         d = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
-        return d["data"]["albumListModeSort"][-1]["id"]
+        for album in d["data"]["albumListModeSort"]:
+            if album["name"] == name:
+                return album["id"]
+        return None
 
-    async def _get_image(self, album_id: str, name: str) -> RawImage:
-
+    async def _get_image(self, album_id: str, name: str) -> RawImage | None:
         resp = await self.client.get(
             "https://h5.qzone.qq.com/proxy/domain/photo.qzone.qq.com/fcgi-bin/cgi_list_photo",
             params={
@@ -241,24 +257,17 @@ class Qzone:
                 "pageStart": 0,
                 "pageNum": 500,
             },
-        )  # ?g_tk=1250279706&hostUin=858479588&topicId=V10p6ohr1EopAd&noTopic=0&uin=858479588&pageStart=0&inCharset=utf-8&outCharset=utf-8
+        )
 
-        text = resp.text.replace(" ", "")[10:-16] + "]}}"
         data = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
         for p in data["data"]["photoList"]:
             print(p["name"])
             print(name)
             if p["name"] == name:
                 return RawImage.parse(p, album_id=album_id)
-        raise RuntimeError("Fuck! Where's the photo?")
+        return None
 
-    async def upload_raw_image(self, file_path: str) -> RawImage:
-        album = await self._get_default_album()
-        name = base64.b64encode(random.randbytes(16)).decode("utf-8")
-
-        session = await self._get_session(
-            file_path=file_path, album_id=album, name=name
-        )
+    async def _upload_raw_image(self, file_path: str, session: str):
         slice_size = 16384
 
         total_size = get_len(file_path)
@@ -299,7 +308,30 @@ class Qzone:
                         "uin": str(self.uin),
                     },
                 )
-        return await self._get_image(name=name, album_id=album)
+
+    async def upload_raw_image(
+        self, album_name: str, file_path: list[str]
+    ) -> list[str]:
+        album_id = await self.get_album(album_name)
+        if album_id == None:
+            raise RuntimeError(f"相册 {album_name} 不存在")
+
+        names = []
+        iBatchID = int(time.time() * 1e6)
+        for i, file in enumerate(file_path):
+            name = base64.b64encode(random.randbytes(16)).decode("utf-8")
+            names.append(name)
+            session = await self._get_session(
+                file_path=file,
+                album_id=album_id,
+                name=name,
+                index=i,
+                total=len(file_path),
+                iBatchID=iBatchID,
+            )
+            print(session)
+            await self._upload_raw_image(file_path=file, session=session)
+        return names
 
 
 def get_len(file_path: str):
