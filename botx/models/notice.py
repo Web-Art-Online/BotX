@@ -64,6 +64,22 @@ class GroupDecrease(Notice):
     user_id: int
 
 
+@dataclass_json
+@dataclass(frozen=True, slots=True)
+class EmojiLike(Notice):
+    notice_type = "group_msg_emoji_like"
+
+    user_id: int
+    group_id: int
+    likes: list["EmojiLike.Likes"]
+
+    @dataclass_json
+    @dataclass
+    class Likes:
+        emoji_id: int
+        count: int
+
+
 notices = [
     clazz
     for _, clazz in globals().items()
