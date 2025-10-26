@@ -71,6 +71,7 @@ class EmojiLike(Notice):
 
     user_id: int
     group_id: int
+    message_id: int
     likes: list["EmojiLike.Likes"]
 
     @dataclass_json
