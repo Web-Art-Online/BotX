@@ -105,6 +105,7 @@ class Bot:
                         msg = PrivateMessage.from_dict(data)
                     else:
                         msg = GroupMessage.from_dict(data)
+                        
                     if msg.message[0]["type"] == "text":
                         parts = msg.message[0]["data"]["text"].split(" ")
                          # 如果用户没有添加指令就不要执行了
@@ -127,21 +128,13 @@ class Bot:
                                         task = asyncio.create_task(asyncio.to_thread(cmd.func, **params))
                                     self.__tasks[task.get_name()] = data
                                     break
-                    # 不再回复“未知命令”，而是让消息继续交给其他消息处理器
+
                     for handler in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
                         if inspect.iscoroutinefunction(handler):
                             task = asyncio.create_task(handler(msg))
                         else:
                             task = asyncio.create_task(asyncio.to_thread(handler, msg))
                         self.__tasks[task.get_name()] = data
-
-                    else:
-                        for handler in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
-                            if inspect.iscoroutinefunction(handler):
-                                task = asyncio.create_task(handler(msg))
-                            else:
-                                task = asyncio.create_task(asyncio.to_thread(handler, msg))
-                            self.__tasks[task.get_name()] = data
                     await self.call_api(
                         action="mark_msg_as_read", params={"message_id": msg.message_id}
                     )
