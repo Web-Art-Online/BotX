@@ -126,7 +126,7 @@ class Bot:
                                         task = asyncio.create_task(cmd.func(**params))
                                     else:
                                         task = asyncio.create_task(asyncio.to_thread(cmd.func, **params))
-                                    self.__tasks[task.get_name()] = data
+                                    
                                     break
 
                     for handler in self.__message_handlers.get(Message, []) + self.__message_handlers.get(type(msg), []):
@@ -134,7 +134,7 @@ class Bot:
                             task = asyncio.create_task(handler(msg))
                         else:
                             task = asyncio.create_task(asyncio.to_thread(handler, msg))
-                        self.__tasks[task.get_name()] = data
+                        self.__add_task(task, data)
                     await self.call_api(
                         action="mark_msg_as_read", params={"message_id": msg.message_id}
                     )
@@ -172,7 +172,7 @@ class Bot:
                                         )
                                     else:
                                         task = asyncio.create_task(asyncio.to_thread(handler, clazz.from_dict(data)))
-                                    self.__tasks[task.get_name()] = data
+                                    self.__add_task(task, data)
                 case "request":
                     for clazz in requests:
                         if clazz.request_type == data["request_type"]:
@@ -184,7 +184,7 @@ class Bot:
                                         )
                                     else:
                                         task = asyncio.create_task(asyncio.to_thread(handler, clazz.from_dict(data)))
-                                    self.__tasks[task.get_name()] = data
+                                    self.__add_task(task, data)
                 case _:
                     self.getLogger().warning("Onebot 上报了未知事件.")
 
@@ -365,3 +365,7 @@ class Bot:
                 .split(";")
             )
         return Qzone(uin=str(self.me.user_id), cookies=cookies)
+
+    def __add_task(self, task: asyncio.Task, data: dict):
+        self.__tasks[task.get_name()] = data
+        task.add_done_callback(lambda t: self.__tasks.pop(t.get_name()))
