@@ -407,7 +407,6 @@ class Qzone:
                 "unikey": f"http://user.qzone.qq.com/{emotion.uin}/mood/{emotion.key}",
             },
         )
-        print(resp.text)
 
 
 def get_len(file_path: str):
