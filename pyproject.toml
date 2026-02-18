@@ -9,7 +9,8 @@ dependencies = [
     "dataclasses_json>=0.6.7",
     "websockets>=14.2",
     "colorlog>=6.9.0",
-    "httpx>=0.28.1"
+    "httpx>=0.28.1",
+    "demjson3>=3.0.6",
 ]
 keywords = ["python", "qq", "bot", "onebot"] # 关键字
 classifiers = [

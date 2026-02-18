@@ -1,10 +1,12 @@
-import json
+from venv import logger
+import demjson3
 import math
 import time
 import base64
 import hashlib
 import os
 import random
+from typing import Any
 
 from httpx import AsyncClient
 
@@ -58,6 +60,19 @@ class RawImage(QzoneImage):
         return cls(pic_bo=pic_bo, richval=richval)
 
 
+class Emotion:
+    key: str
+    uin: str
+    nickname: str
+    abstime: str
+
+    def __init__(self, key: str, uin: str, nickname: str, abstime: str):
+        self.key = key
+        self.uin = uin
+        self.nickname = nickname
+        self.abstime = abstime
+
+
 class Qzone:
     uin: str
     cookies: dict
@@ -108,7 +123,7 @@ class Qzone:
             },
         )
         if resp.status_code == 200:
-            r = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
+            r = load_resp(resp.text)
             if r.get("ret") != 0:
                 raise RuntimeError(f"上传图片失败[{resp.status_code}]:{resp.text}")
             return NormalImage.parse(r)
@@ -238,7 +253,7 @@ class Qzone:
                 "outCharset": "utf-8",
             },
         )
-        d = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
+        d = load_resp(resp.text)
         for album in d["data"]["albumListModeSort"]:
             if album["name"] == name:
                 return album["id"]
@@ -259,10 +274,8 @@ class Qzone:
             },
         )
 
-        data = json.loads(resp.text[resp.text.find("{") : resp.text.rfind("}") + 1])
+        data = load_resp(resp.text)
         for p in data["data"]["photoList"]:
-            print(p["name"])
-            print(name)
             if p["name"] == name:
                 return RawImage.parse(p, album_id=album_id)
         return None
@@ -356,9 +369,45 @@ class Qzone:
                 total=len(file_path),
                 iBatchID=iBatchID,
             )
-            print(session)
             await self._upload_raw_image(file_path=file, session=session)
         return names
+
+    async def get_feeds(self, page: int = 0, length: int = 10) -> list[Emotion]:
+        resp = await self.client.get(
+            "https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds3_html_more",
+            params={
+                "g_tk": self.get_g_tk(),
+                "uin": self.uin,
+                "useutf8": 1,
+                "pagenum": page,
+                "count": length,
+            },
+        )
+        data = load_resp(resp.text)
+        if data["code"] != 0:
+            logger.error(data)
+            raise RuntimeError(data["message"])
+        emotions = []
+        for f in data["data"]["data"][:-1]:
+            emotions.append(
+                Emotion(
+                    key=f["key"],
+                    uin=f["uin"],
+                    nickname=f["nickname"],
+                    abstime=f["abstime"],
+                )
+            )
+        return emotions
+
+    async def like(self, emotion: Emotion):
+        resp = await self.client.post(
+            "https://user.qzone.qq.com/proxy/domain/w.qzone.qq.com/cgi-bin/likes/internal_dolike_app",
+            params={"g_tk": self.get_g_tk()},
+            data={
+                "unikey": f"http://user.qzone.qq.com/{emotion.uin}/mood/{emotion.key}",
+            },
+        )
+        print(resp.text)
 
 
 def get_len(file_path: str):
@@ -371,3 +420,7 @@ def get_md5(file_path: str):
         for chunk in iter(lambda: f.read(16384), b""):
             md5.update(chunk)
     return md5.hexdigest()
+
+
+def load_resp(text: str) -> Any:
+    return demjson3.decode(text[text.find("{") : text.rfind("}") + 1])

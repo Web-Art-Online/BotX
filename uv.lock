@@ -17,11 +17,12 @@ wheels = [
 
 [[package]]
 name = "botx"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "colorlog" },
     { name = "dataclasses-json" },
+    { name = "demjson3" },
     { name = "httpx" },
     { name = "websockets" },
 ]
@@ -30,6 +31,7 @@ dependencies = [
 requires-dist = [
     { name = "colorlog", specifier = ">=6.9.0" },
     { name = "dataclasses-json", specifier = ">=0.6.7" },
+    { name = "demjson3", specifier = ">=3.0.6" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "websockets", specifier = ">=14.2" },
 ]
@@ -76,6 +78,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/64/a4/f71d9cf3a5ac257c9
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/be/d0d44e092656fe7a06b55e6103cbce807cdbdee17884a5367c68c9860853/dataclasses_json-0.6.7-py3-none-any.whl", hash = "sha256:0dbf33f26c8d5305befd61b39d2b3414e8a407bedc2834dea9b8d642666fb40a", size = 28686, upload-time = "2024-06-09T16:20:16.715Z" },
 ]
+
+[[package]]
+name = "demjson3"
+version = "3.0.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/d2/6a81a9b5311d50542e11218b470dafd8adbaf1b3e51fc1fddd8a57eed691/demjson3-3.0.6.tar.gz", hash = "sha256:37c83b0c6eb08d25defc88df0a2a4875d58a7809a9650bd6eee7afd8053cdbac", size = 131477, upload-time = "2022-10-22T19:09:05.379Z" }
 
 [[package]]
 name = "h11"
