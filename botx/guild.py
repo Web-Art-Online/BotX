@@ -109,7 +109,7 @@ class Guild:
 
     async def publish(
         self, text: str, guild_id: str, channel_id: str, images: list[str] = []
-    ):
+    ) -> str:
         image_list = []
         for i, img_url in enumerate(images):
             image_list.append(
@@ -146,7 +146,7 @@ class Guild:
                 },
             },
         )
-        print(resp.text)
+        return resp.json()["data"]["feed"]["id"]
 
     # 实则和 Qzone 的 g_tk 一样
     def get_bkn(self) -> str:
