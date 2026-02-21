@@ -13,6 +13,7 @@ from botx.models import *
 from botx.models.notice import notices
 from botx.models.request import requests
 from botx.qzone import Qzone
+from botx.guild import Guild
 
 _instances: dict[int, "Bot"] = {}
 
@@ -366,6 +367,16 @@ class Bot:
             )
         return Qzone(uin=str(self.me.user_id), cookies=cookies)
 
+    async def get_guild(self) -> Guild:
+        cookies = dict(
+                c.split("=")
+                for c in 
+                (await self.call_api("get_cookies", {"domain": "pd.qq.com"}))["data"]["cookies"]
+                .replace(" ", "")
+                .split(";")
+            )
+        return Guild(uin=str(self.me.user_id), cookies=cookies)
+        
     def __add_task(self, task: asyncio.Task, data: dict):
         self.__tasks[task.get_name()] = data
         task.add_done_callback(lambda t: self.__tasks.pop(t.get_name()))

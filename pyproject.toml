@@ -1,6 +1,6 @@
 [project]
 name = "botx" # 项目名称
-version = "0.2.0" # 版本号
+version = "0.3.0" # 版本号
 description = "Asynchronous QQ robot framework based on OneBot 11 for Python" # 项目描述
 readme = "README.md" # 读取项目描述的文件（可选）
 license = { text = "LGPL v2 License" } # 许可证类型
