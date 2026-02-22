@@ -181,6 +181,8 @@ class Guild:
             },
             headers=headers,
         )
+        if resp.json()["retcode"] != 0:
+            raise RuntimeError(f"Delete feed failed: {resp.text}")
 
     async def get_feeds(
         self, guild_id: str, channel_id: str, offset: int = 0, limit: int = 20
