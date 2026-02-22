@@ -7,10 +7,29 @@ from wsgiref import headers
 
 from httpx import AsyncClient
 
+from botx.models.user import User
+
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
 CHUNK_SIZE = 2 << 19
+
+
+class Feed:
+    id: str
+    createTime: str
+    poster: User
+    text: str
+    images: list[str]
+
+    def __init__(
+        self, id: str, create_time: str, poster: User, text: str, images: list[str]
+    ):
+        self.id = id
+        self.createTime = create_time
+        self.poster = poster
+        self.text = text
+        self.images = images
 
 
 class Guild:
@@ -89,11 +108,10 @@ class Guild:
         # print(resp.request.headers)
 
         if resp.status_code != 200 or resp.json()["retcode"] != 0:
-            raise Exception(f"Upload slice failed: {resp.text}")
-        print(resp.text)
+            raise RuntimeError(f"Upload slice failed: {resp.text}")
         return resp.json().get("extend_info")
 
-    async def upload_image(self, file_path):
+    async def upload_image(self, file_path) -> str:
         sha1 = get_cumulative_sha1(file_path, os.path.getsize(file_path))
         file_size = os.path.getsize(file_path)
         ukey = await self._apply_upload(sha1, size=file_size)
@@ -147,6 +165,67 @@ class Guild:
             },
         )
         return resp.json()["data"]["feed"]["id"]
+
+    async def delete_feed(self, guild_id: str, feed_id: str) -> None:
+        headers = self.client.headers.copy()
+        headers["x-oidb"] = '{"uint32_service_type":1,"uint32_command":"0x91f9"}'
+        resp = await self.client.post(
+            "/qunng/guild/gotrpc/v1/trpc.group_pro.cmd0xf57.BatchOperateSvr/HandleProcess",
+            params={"bkn": self.get_bkn()},
+            json={
+                "guild_id": guild_id,
+                "operate_type": 2,
+                "include": {
+                    "feed_ids": [feed_id],
+                },
+            },
+            headers=headers,
+        )
+
+    async def get_feeds(
+        self, guild_id: str, channel_id: str, offset: int = 0, limit: int = 20
+    ) -> list[Feed]:
+        headers = self.client.headers.copy()
+        headers["x-oidb"] = '{"uint32_service_type":1,"uint32_command":"0x931b"}'
+
+        resp = await self.client.post(
+            "/qunng/guild/gotrpc/v1/trpc.qchannel.web_feeds_reader.WebFeedsReaderSvr/GetChannelTimelineFeedsByCondition",
+            params={"bkn": self.get_bkn()},
+            json={
+                "feed_attach_info": json.dumps(
+                    {
+                        "ConditionStatus": {
+                            "Offset": offset,
+                        }
+                    }
+                ),
+                "limit": limit,
+                "filter_condition": {
+                    "guild_id": guild_id,
+                    "channel_ids": [channel_id],
+                },
+            },
+            headers=headers,
+        )
+        feeds = []
+        for item in resp.json()["data"]["vec_feed"]:
+            feeds.append(
+                Feed(
+                    id=item["id"],
+                    create_time=item["createTime"],
+                    poster=User(
+                        user_id=item["poster"]["loginId"],
+                        nickname=item["poster"]["nick"],
+                    ),
+                    text=(
+                        item["contents"]["contents"][0]["text_content"]["text"]
+                        if len(item["contents"]["contents"]) > 0
+                        else ""
+                    ),
+                    images=[img["picUrl"] for img in item["images"]],
+                )
+            )
+        return feeds
 
     # 实则和 Qzone 的 g_tk 一样
     def get_bkn(self) -> str:
