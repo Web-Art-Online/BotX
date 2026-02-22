@@ -1,4 +1,5 @@
 import base64
+from email import header
 import hashlib
 import json
 import os
@@ -47,11 +48,7 @@ class Guild:
                 "Referer": "https://pd.qq.com/",
                 "Origin": "https://pd.qq.com",
                 "User-Agent": UA,
-                "x-oidb": '{"uint32_service_type":10}',
                 "x-qq-client-appid": "537246381",
-                # "businuess_type": "1",
-                # "agent_type": "34",
-                # "appid": "1002",
             },
             timeout=60,
         )
@@ -128,6 +125,8 @@ class Guild:
     async def publish(
         self, text: str, guild_id: str, channel_id: str, images: list[str] = []
     ) -> str:
+        headers = self.client.headers.copy()
+        headers["x-oidb"] = '{"uint32_service_type":10}'
         image_list = []
         for i, img_url in enumerate(images):
             image_list.append(
@@ -163,6 +162,7 @@ class Guild:
                     "clientVideoContents": [],
                 },
             },
+            headers=headers,
         )
         return resp.json()["data"]["feed"]["id"]
 
