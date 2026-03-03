@@ -18,17 +18,17 @@ from botx.guild import Guild
 _instances: dict[int, "Bot"] = {}
 
 
-def get_bot(id: int) -> "Bot":
+def get_bot(id: int) -> "Bot | None":
     return _instances.get(id)
 
 
 class Bot:
     ws_uri: str
-    __token: str
+    __token: str | None
     
     cmd_prefix: list[str]
     me: User
-    msg_cd: int
+    msg_cd: float
     log_level: str
     __running: bool = False
     __queue: asyncio.Queue
@@ -85,11 +85,12 @@ class Bot:
         
         def error(loop: asyncio.AbstractEventLoop, context: dict):
             self.getLogger().error(context)
+            data = self.__tasks.get(context["future"].get_name())
             for h in self.__error_handlers:
                 if inspect.iscoroutinefunction(h):
-                    loop.create_task(h(context, self.__tasks[context["future"].get_name()]))
+                    loop.create_task(h(context, data))
                 else:
-                    h(context, self.__tasks[context["future"].get_name()])
+                    h(context, data)
         asyncio.get_running_loop().set_exception_handler(error)
 
         async def sender(ws):
