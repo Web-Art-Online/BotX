@@ -20,7 +20,7 @@ class FriendRequest(Request):
     comment: str
     flag: str
 
-    async def result(self, approve: bool, remark: str = None):
+    async def result(self, approve: bool, remark: str = ""):
         from botx.bot import get_bot
 
         await get_bot(self.self_id).call_api(
