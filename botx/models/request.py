@@ -27,7 +27,7 @@ class FriendRequest(Request):
             "set_friend_add_request",
             {
                 "flag": self.flag,
-                "approve": approve,
+                "approve": "true" if approve else "false",
                 "remark": remark,
             },
         )
