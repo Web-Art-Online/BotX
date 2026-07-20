@@ -111,7 +111,7 @@ class Bot:
                     if msg.message[0]["type"] == "text":
                         parts = msg.message[0]["data"]["text"].split(" ")
                          # 如果用户没有添加指令就不要执行了
-                        if len(self.__commands) > 1 and msg.raw_message[0] in self.cmd_prefix:
+                        if len(self.__commands) > 1 and len(msg.raw_message) > 0 and msg.raw_message[0] in self.cmd_prefix:
                             # 是指令
                             for cmd in self.__commands:
                                 if parts[0][1:] in cmd.names and isinstance(msg, cmd.cmd_type):
