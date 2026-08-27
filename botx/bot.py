@@ -109,7 +109,7 @@ class Bot:
                         msg = GroupMessage.from_dict(data)
                         
                     if msg.message[0]["type"] == "text":
-                        parts = msg.message[0]["data"]["text"].split(" ")
+                        parts = msg.raw_message.split(" ")
                          # 如果用户没有添加指令就不要执行了
                         if len(self.__commands) > 1 and len(msg.raw_message) > 0 and msg.raw_message[0] in self.cmd_prefix:
                             # 是指令
